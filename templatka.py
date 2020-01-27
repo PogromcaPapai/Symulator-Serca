@@ -88,10 +88,10 @@ if __name__ == "__main__":
         textSurface = font.render(text, True, (255,255,255))
         return textSurface, textSurface.get_rect()
 
-    def message_display(text):
+    def message_display(text, pos):
         largeText = pg.font.Font('freesansbold.ttf',60)
         TextSurf, TextRect = text_objects(text, largeText)
-        TextRect.center = (45,30)
+        TextRect.center = pos
         screen.blit(TextSurf, TextRect)
 
     # Gamer stuff
@@ -100,10 +100,14 @@ if __name__ == "__main__":
         return abs(obj.x-win)
 
     def managebeats(container, tetno, fps=60):
+        amount = 0
         if container[0].x<-60:
             container.pop(0)
+            amount += 1
         if container[-1].x<720-(tetno*fps/180):
             container.append(Beat(container))
+        return amount
+        
 
     class Beat(object):
         
@@ -115,8 +119,8 @@ if __name__ == "__main__":
         def move(self, tetno, fps=60):
             self.x -= tetno/fps*5
 
-        def get_obj(self):
-            return pg.Rect(self.x, self.y, 20, 60)
+        def get_pos(self):
+            return (self.x, self.y)
 
         def get_points(self, wykrycie = 60, mod=0.1):
             return mod*(wykrycie-abs(self.x - 120))
@@ -129,47 +133,79 @@ if __name__ == "__main__":
                 return self.get_points(wykrycie=wykrycie)
 
     screen = pg.display.set_mode((720, 480))
-    done = False
-    clock = pg.time.Clock()            
+    clock = pg.time.Clock()      
+    
+# Load textures
+    t_bgdef = pg.image.load("img/bg_def.png")
+    t_bgbr = pg.image.load("img/bg_bright.png").convert()
+    t_bl = pg.image.load("img/block.png")
+    t_dt = pg.image.load("img/det.png").convert_alpha()
+      
 
-    beats = []
-    beats.append(Beat(beats))
-    tetno = 20
-    points = 100
-    cl_time = time.clock()
+    alpha_measure = 0
 
+    while True:
+        done = False    
+        beats = []
+        beats.append(Beat(beats))
+        tetno = 20
+        points = 100
+        cl_time = time.clock()
 
-    while not done:
-        for event in pg.event.get():
-            if event.type == pg.QUIT:
-                done = True
-                quit_program.set()
+        while not done:
+            for event in pg.event.get():
+                if event.type == pg.QUIT:
+                    done = True
+                    quit_program.set()
+
+            # Check death
+            if points<0:
+                break
+
+            if (blink.value == 1 or pg.key.get_pressed()[pg.K_SPACE]) and time.clock()-cl_time>0.05:
+                cl_time = time.clock()
+                print('BLINK!')
+                points += int(sorted(beats, key=sort_key)[0].destroy())
+                print(points)
+                alpha_measure += 1
+                blink.value = 0
+            
+            # background
+            screen.blit(t_bgdef, (0, 0))
+            if alpha_measure>-129:
+                if alpha_measure >= 128:
+                    alpha_measure = -129
+                else:
+                    alpha_measure += 16
+                t_bgbr.set_alpha(128-abs(alpha_measure))
+                screen.blit(t_bgbr, (0, 0))
                     
 
-        if (blink.value == 1 or pg.key.get_pressed()[pg.K_SPACE]) and time.clock()-cl_time>0.15:
-            cl_time = time.clock()
-            print('BLINK!')
-            points += int(sorted(beats, key=sort_key)[0].destroy())
-            print(points)
-            blink.value = 0
-        screen.fill((0, 0, 0))
+            points -= 20*managebeats(beats, tetno)
+            for i in beats:
+                i.move(tetno)
+                screen.blit(t_bl, i.get_pos())
+            message_display(str(points), (45,30))
+            #pg.draw.rect(screen, (255,150,150), pg.Rect(120, 240, 5, 480))
+            screen.blit(t_dt, (120, 0))
 
-        managebeats(beats, tetno)
-        for i in beats:
-            i.move(tetno)
-            pg.draw.rect(screen, (0, 128, 255), i.get_obj())
-        message_display(str(points))
-        pg.draw.rect(screen, (255,150,150), pg.Rect(120, 240, 5, 480))
+            pg.display.flip()
+            if pg.key.get_pressed()[pg.K_UP]:
+                tetno += 1
+                print(tetno)
+            if pg.key.get_pressed()[pg.K_DOWN]:
+                tetno -= 1
+                print(tetno)
 
+
+            clock.tick(60)
+        message_display("U dead", (720/2,480/2))
         pg.display.flip()
-        if pg.key.get_pressed()[pg.K_UP]:
-            tetno += 10
-            print(tetno)
-        if pg.key.get_pressed()[pg.K_DOWN]:
-            tetno -= 10
-            print(tetno)
+        while True:
+            if pg.key.get_pressed()[pg.K_SPACE] or blink.value == 1:
+                blink.value = 0
+                break
 
-        clock.tick(60)
 
 # Zakończenie podprocesów
     proc_blink_det.join()
