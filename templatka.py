@@ -82,6 +82,10 @@ if __name__ == "__main__":
     ############################################
     pg.init()
 
+    ############
+    DEBUG = False
+    ############
+
 # Text rendering
 
     def text_objects(text, font):
@@ -100,13 +104,13 @@ if __name__ == "__main__":
         return abs(obj.x-win)
 
     def managebeats(container, tetno, fps=60):
-        amount = 0
+        missed = 0
         if container[0].x<-60:
             container.pop(0)
-            amount += 1
+            missed += 1
         if container[-1].x<720-(tetno*fps/180):
             container.append(Beat(container))
-        return amount
+        return missed
         
 
     class Beat(object):
@@ -162,7 +166,7 @@ if __name__ == "__main__":
             if points<0:
                 break
 
-            if (blink.value == 1 or pg.key.get_pressed()[pg.K_SPACE]) and time.clock()-cl_time>0.05:
+            if ((blink.value == 1 and DEBUG == False) or pg.key.get_pressed()[pg.K_SPACE]) and time.clock()-cl_time>4/tetno:
                 cl_time = time.clock()
                 print('BLINK!')
                 points += int(sorted(beats, key=sort_key)[0].destroy())
@@ -186,8 +190,7 @@ if __name__ == "__main__":
                 i.move(tetno)
                 screen.blit(t_bl, i.get_pos())
             message_display(str(points), (45,30))
-            #pg.draw.rect(screen, (255,150,150), pg.Rect(120, 240, 5, 480))
-            screen.blit(t_dt, (120, 0))
+            screen.blit(t_dt, (120-75, 0))
 
             pg.display.flip()
             if pg.key.get_pressed()[pg.K_UP]:
@@ -202,8 +205,12 @@ if __name__ == "__main__":
         message_display("U dead", (720/2,480/2))
         pg.display.flip()
         while True:
-            if pg.key.get_pressed()[pg.K_SPACE] or blink.value == 1:
+            if ((blink.value == 1 and DEBUG == False) or pg.key.get_pressed()[pg.K_SPACE]) and time.clock()-cl_time>0.05:
                 blink.value = 0
+                break
+    
+            if event.type == pg.QUIT:
+                quit_program.set()
                 break
 
 
