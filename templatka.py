@@ -8,7 +8,7 @@ import filterlib as flt
 import blink as blk
 #from pyOpenBCI import OpenBCIGanglion
 import time
-
+import random
 
 def blinks_detector(quit_program, blink_det, blinks_num, blink,):
     def detect_blinks(sample):
@@ -111,6 +111,25 @@ if __name__ == "__main__":
         if container[-1].x<720-(tetno*fps/180):
             container.append(Beat(container))
         return missed
+    
+    def nowyrytm(rytm, szansa=0.005, minimum=50, maximum=100):
+        if random.random() <= szansa:
+            new = random.randint(minimum, maximum)
+            print(f"Nowy rytm: {new}")
+            return new
+        else: 
+            return rytm
+    
+    def idz_do_rytmu(aktualny, docelowy, counter, step=0.1):
+
+        if int(aktualny) == docelowy:
+            return float(docelowy)
+        elif aktualny > docelowy:
+            #print(f"{aktualny} dąży do {docelowy}", random.random())
+            return round(aktualny-(step*(int(aktualny)-docelowy)), 3)
+        elif aktualny < docelowy:
+            #print(f"{aktualny} dąży do {docelowy}", random.random())
+            return round(aktualny+(step*(int(docelowy)-aktualny)), 3)
         
 
     class Beat(object):
@@ -163,8 +182,12 @@ if __name__ == "__main__":
                     quit_program.set()
 
             # Check death
-            if points<0:
+            if points<0 and not DEBUG:
                 break
+                
+             #Sprawdza nowy rytm
+            tetno_doc = nowyrytm(tetno_doc, szansa=0.003, minimum=50, maximum=120)
+            tetno = idz_do_rytmu(tetno, tetno_doc, counter, step=0.01)
 
             if ((blink.value == 1 and DEBUG == False) or pg.key.get_pressed()[pg.K_SPACE]) and time.clock()-cl_time>4/tetno:
                 cl_time = time.clock()
