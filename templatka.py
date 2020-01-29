@@ -10,6 +10,7 @@ import blink as blk
 import time
 import random
 
+
 def blinks_detector(quit_program, blink_det, blinks_num, blink,):
     def detect_blinks(sample):
         if SYMULACJA_SYGNALU:
@@ -108,10 +109,10 @@ if __name__ == "__main__":
         if container[0].x<-60:
             container.pop(0)
             missed += 1
-        if container[-1].x<720-(tetno*fps/180):
+        if container[-1].age >= 60*fps/tetno:
             container.append(Beat(container))
         return missed
-    
+
     def nowyrytm(rytm, szansa=0.005, minimum=50, maximum=100):
         if random.random() <= szansa:
             new = random.randint(minimum, maximum)
@@ -119,7 +120,7 @@ if __name__ == "__main__":
             return new
         else: 
             return rytm
-    
+
     def idz_do_rytmu(aktualny, docelowy, counter, step=0.1):
 
         if int(aktualny) == docelowy:
@@ -130,17 +131,19 @@ if __name__ == "__main__":
         elif aktualny < docelowy:
             #print(f"{aktualny} dąży do {docelowy}", random.random())
             return round(aktualny+(step*(int(docelowy)-aktualny)), 3)
-        
+
+
 
     class Beat(object):
         
         def __init__(self, parent):
             self.y = 240
             self.x = 800
+            self.age = 0
             self.parent = parent
 
-        def move(self, tetno, fps=60):
-            self.x -= tetno/fps*5
+        def move(self, tetno, speed, fps=60):
+            self.x -= int(tetno)/fps*speed
 
         def get_pos(self):
             return (self.x, self.y)
@@ -163,16 +166,22 @@ if __name__ == "__main__":
     t_bgbr = pg.image.load("img/bg_bright.png").convert()
     t_bl = pg.image.load("img/block.png")
     t_dt = pg.image.load("img/det.png").convert_alpha()
+
+#Ładowanie dźwięków
+    uderzenie = pg.mixer.Sound('sounds/uderzenie.wav')
       
 
     alpha_measure = 0
+    SPEED = 2
 
     while True:
         done = False    
         beats = []
         beats.append(Beat(beats))
-        tetno = 20
+        tetno = 60.0
+        tetno_doc = 60
         points = 100
+        counter = 0
         cl_time = time.clock()
 
         while not done:
@@ -184,16 +193,17 @@ if __name__ == "__main__":
             # Check death
             if points<0 and not DEBUG:
                 break
-                
-             #Sprawdza nowy rytm
+
+            #Sprawdza nowy rytm
             tetno_doc = nowyrytm(tetno_doc, szansa=0.003, minimum=50, maximum=120)
             tetno = idz_do_rytmu(tetno, tetno_doc, counter, step=0.01)
 
-            if ((blink.value == 1 and DEBUG == False) or pg.key.get_pressed()[pg.K_SPACE]) and time.clock()-cl_time>4/tetno:
+
+            if ((blink.value == 1 and DEBUG == False) or pg.key.get_pressed()[pg.K_SPACE]) and time.clock()-cl_time>20/tetno:
+                uderzenie.play()
                 cl_time = time.clock()
                 print('BLINK!')
                 points += int(sorted(beats, key=sort_key)[0].destroy())
-                print(points)
                 alpha_measure += 1
                 blink.value = 0
             
@@ -210,17 +220,19 @@ if __name__ == "__main__":
 
             points -= 20*managebeats(beats, tetno)
             for i in beats:
-                i.move(tetno)
+                i.move(tetno, SPEED)
+                i.age += 1
                 screen.blit(t_bl, i.get_pos())
-            message_display(str(points), (45,30))
+            message_display(str(points), (60,30))
+            message_display(str(round(tetno)), (660,30))
             screen.blit(t_dt, (120-75, 0))
 
             pg.display.flip()
             if pg.key.get_pressed()[pg.K_UP]:
-                tetno += 1
+                tetno_doc += 1
                 print(tetno)
             if pg.key.get_pressed()[pg.K_DOWN]:
-                tetno -= 1
+                tetno_doc -= 1
                 print(tetno)
 
 
